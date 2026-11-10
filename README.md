@@ -1,4 +1,4 @@
-# Holmes
+# Holmes – Incident Agents
 
 **An AI agent that investigates why a service broke: it reads logs, metrics and runbooks, names the likely cause, and suggests a fix for a human to approve**
 
@@ -42,7 +42,7 @@ flowchart LR
 
 ## How it is tested
 
-A demo app (or [Sterling](https://github.com/striderzz/Sterling)) is broken on purpose in 15–20 ways: a crashed container, a slow database, a bad config value, memory pressure, a bad deploy. For each incident Holmes is scored on:
+A demo app (or [Sterling](https://github.com/striderzz/sterling-payments-ledger)) is broken on purpose in 15–20 ways: a crashed container, a slow database, a bad config value, memory pressure, a bad deploy. For each incident Holmes is scored on:
 - whether the true cause is its top answer (**top-1 accuracy**) or in its top three;
 - time to answer and **cost per investigation** (from Langfuse).
 
@@ -86,7 +86,7 @@ Every AI feature goes through one small provider layer, so you can switch models
 ## Repository structure
 
 ```
-Holmes/
+holmes-incident-agents/
 ├── requirements.txt
 ├── .env.example
 ├── holmes/agents/      # LangGraph graph + agents
