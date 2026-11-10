@@ -1,4 +1,4 @@
-# Jarvis – Incident Agents: interview prep
+# IncidentIQ AgentOps: interview prep
 
 Companion to [README.md](README.md). This file is for explaining the project out loud: the pitch, how each tool works, the diagrams, and the questions interviewers ask. Nothing here is a measured result. Every `[measured ...]` blank gets filled from `docs/results/` after the eval runs.
 
@@ -8,13 +8,13 @@ Companion to [README.md](README.md). This file is for explaining the project out
 
 ### 30-second pitch
 
-"Jarvis is a multi-agent system that does the first pass of incident response. When a Prometheus alert fires, a LangGraph workflow starts: a triage agent reads the alert, four specialist agents pull evidence from logs, metrics, git history and runbooks through MCP tool servers, and a reasoning agent on Claude Opus ranks the likely root causes, with every claim tied to a piece of evidence. Then it stops and waits for a human to approve the fix. I test it by breaking my own payments service, Ironbank, in 15 to 20 scripted ways and scoring whether Jarvis finds the real cause in its top one or top three, how long it takes, and what it costs per incident."
+"IncidentIQ is a multi-agent system that does the first pass of incident response. When a Prometheus alert fires, a LangGraph workflow starts: a triage agent reads the alert, four specialist agents pull evidence from logs, metrics, git history and runbooks through MCP tool servers, and a reasoning agent on Claude Opus ranks the likely root causes, with every claim tied to a piece of evidence. Then it stops and waits for a human to approve the fix. I test it by breaking my own payments service, IronPay, in 15 to 20 scripted ways and scoring whether IncidentIQ finds the real cause in its top one or top three, how long it takes, and what it costs per incident."
 
 ### 2-minute walkthrough
 
 "The problem is the first 20 minutes of an incident. The on-call engineer does the same things every time: look at the dashboard, query logs, check what was deployed, find the runbook. I wanted to see how much of that an agent system can do reliably, and to measure it instead of guessing.
 
-The setup is all in Docker Compose. Ironbank, my payments API with Postgres and Redis, runs next to Prometheus, Alertmanager, Loki and Grafana. Alert rules on error rate and latency fire through Alertmanager to a FastAPI webhook in Jarvis.
+The setup is all in Docker Compose. IronPay, my payments API with Postgres and Redis, runs next to Prometheus, Alertmanager, Loki and Grafana. Alert rules on error rate and latency fire through Alertmanager to a FastAPI webhook in IncidentIQ.
 
 Each incident is one LangGraph run. The first node is triage, on Claude Haiku: it turns the alert JSON into a typed object with the service, the time window and which specialists to run. Then the specialists run in parallel. Each one is a small tool-use loop on Haiku with a cap of six tool calls, and its tools come from an MCP server. I have four servers: Loki for logs, Prometheus for metrics, git for recent commits and config diffs, and ChromaDB for runbook search. The tools are read-only and they summarize on the server side, so the model gets grouped error patterns with counts, not thousands of raw lines.
 
@@ -34,13 +34,13 @@ For evaluation I wrote 15 to 20 fault scripts: kill a container, drop an index, 
 | MCP Python SDK | Four tool servers (logs, metrics, changes, runbooks) that the agents call | Why not plain Python functions: MCP gives a process boundary and a standard schema, so the same tools work from Claude Desktop, Claude Code or another agent, and they are tested on their own |
 | Claude via `anthropic` SDK | Haiku 5.5 for triage, specialists and summary; Opus 5.5 for root-cause reasoning | Why not one model for everything: most calls are simple tool loops where Haiku is far cheaper; the one hard judgment call gets Opus. Why the raw SDK and not LangChain's chat wrappers: I see the exact request, usage fields and `stop_reason` |
 | ChromaDB | Stores runbook chunks with metadata and serves similarity search | Why not pgvector or Pinecone: a dozen runbooks do not need a server or a paid service; Chroma runs embedded in the runbooks MCP server |
-| Prometheus + Alertmanager | Scrapes Ironbank, Postgres, Redis and container metrics; alert rules fire webhooks | Why not Datadog or CloudWatch: free, local, and PromQL is what most SRE teams use |
+| Prometheus + Alertmanager | Scrapes IronPay, Postgres, Redis and container metrics; alert rules fire webhooks | Why not Datadog or CloudWatch: free, local, and PromQL is what most SRE teams use |
 | Loki + Grafana Alloy | Alloy ships Docker container logs to Loki; the logs server queries with LogQL | Why not Elasticsearch: Loki indexes only labels, so it is light enough for a laptop, and it pairs with Grafana |
-| Grafana | Dashboards for checking Jarvis's claims by hand | Needed to verify the evidence the agents cite |
-| FastAPI | Alert webhook, incident API, approval resume endpoint | Async, Pydantic models shared with the graph state, same framework as Ironbank |
+| Grafana | Dashboards for checking IncidentIQ's claims by hand | Needed to verify the evidence the agents cite |
+| FastAPI | Alert webhook, incident API, approval resume endpoint | Async, Pydantic models shared with the graph state, same framework as IronPay |
 | SQLite | Incidents, LangGraph checkpoints, cost log | Why not Postgres: single-writer local demo; the LangGraph checkpointer interface makes a later swap to Postgres small |
 | Next.js + Tailwind | Incident list, timeline and approval UI, eval table | Why not Streamlit: I need a polished approval flow and full control over layout, and the unslop rules are written for React and Tailwind |
-| Docker Compose | Brings up Ironbank, observability, MCP servers, Jarvis and the UI | Why not Kubernetes: one machine, one command; the fault scripts use `docker` commands directly |
+| Docker Compose | Brings up IronPay, observability, MCP servers, IncidentIQ and the UI | Why not Kubernetes: one machine, one command; the fault scripts use `docker` commands directly |
 | pytest + GitHub Actions | Unit tests, MCP server tests on recorded responses, graph tests with a fake LLM | Tests must not need an API key or spend money |
 
 ### Concepts you must know
@@ -55,9 +55,9 @@ For evaluation I wrote 15 to 20 fault scripts: kill a container, drop an index, 
 
 **MCP (Model Context Protocol)**
 - Three roles: host (the app), client (one connection per server), server (exposes capabilities).
-- Servers expose tools (functions the model can call), resources (readable data) and prompts (templates). Jarvis uses tools.
-- Messages are JSON-RPC 2.0. Transports are stdio (local subprocess) and streamable HTTP (network service). Jarvis uses streamable HTTP so each server is its own container.
-- The client calls `list_tools` to get names, descriptions and JSON Schemas, then `call_tool` to run one. Jarvis converts each MCP tool schema into a Claude tool definition.
+- Servers expose tools (functions the model can call), resources (readable data) and prompts (templates). IncidentIQ uses tools.
+- Messages are JSON-RPC 2.0. Transports are stdio (local subprocess) and streamable HTTP (network service). IncidentIQ uses streamable HTTP so each server is its own container.
+- The client calls `list_tools` to get names, descriptions and JSON Schemas, then `call_tool` to run one. IncidentIQ converts each MCP tool schema into a Claude tool definition.
 - Tool descriptions are prompts. A vague description causes wrong tool choices.
 
 **Claude API (`anthropic` SDK)**
@@ -65,7 +65,7 @@ For evaluation I wrote 15 to 20 fault scripts: kill a container, drop an index, 
 - Claude can ask for several tools in one turn. All results go back together in a single message. A failed tool returns a `tool_result` with `is_error: true` instead of being dropped.
 - Always check `stop_reason` before reading content: `end_turn`, `tool_use`, `max_tokens` (truncated), `refusal` (declined; `stop_details` says why), `pause_turn`.
 - Structured outputs: `client.messages.parse()` with a Pydantic model, or `output_config.format` with a JSON Schema, makes the response match the schema. On Opus 5.5, forced `tool_choice` (`any` or a named tool) returns a 400, so structured outputs are the way to get guaranteed JSON.
-- Effort (`output_config.effort`) trades depth for tokens. Opus 5.5 defaults to `medium` and its thinking cannot be turned off, so Jarvis sets effort explicitly per node.
+- Effort (`output_config.effort`) trades depth for tokens. Opus 5.5 defaults to `medium` and its thinking cannot be turned off, so IncidentIQ sets effort explicitly per node.
 - Prompt caching is a prefix match over `tools`, then `system`, then `messages`. Stable content goes first; one changed byte invalidates everything after it. Check `usage.cache_read_input_tokens` to confirm hits. Prefixes below a model-dependent minimum length are not cached.
 - `usage` reports `input_tokens`, `output_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`. The cost log multiplies these by a price table kept in config.
 - Message Batches run requests asynchronously at half price, with results keyed by `custom_id` in any order.
@@ -94,14 +94,14 @@ For evaluation I wrote 15 to 20 fault scripts: kill a container, drop an index, 
 **Docker Compose**
 - `healthcheck` plus `depends_on: condition: service_healthy` controls start order.
 - `mem_limit` and `restart: "no"` are how memory-pressure and crash scenarios are created.
-- `include:` pulls Ironbank's compose file into the Jarvis stack.
+- `include:` pulls IronPay's compose file into the IncidentIQ stack.
 
 **FastAPI**
 - The webhook returns `202 Accepted` right away and starts the graph run in the background; Alertmanager should never wait on an LLM.
 - Pydantic models validate the Alertmanager payload and are shared with the graph state types.
 
 **Next.js and Tailwind**
-- The UI is a client of the Jarvis API; it polls the incident endpoint every few seconds while a run is active.
+- The UI is a client of the IncidentIQ API; it polls the incident endpoint every few seconds while a run is active.
 - Tailwind's spacing scale is on a 4px grid, which matches the unslop spacing rule.
 
 **pytest and GitHub Actions**
@@ -115,11 +115,11 @@ For evaluation I wrote 15 to 20 fault scripts: kill a container, drop an index, 
 
 ### 1. System flowchart
 
-Ironbank emits metrics and logs, an alert starts a LangGraph run, specialists gather evidence through MCP, and a human approves the proposed fix.
+IronPay emits metrics and logs, an alert starts a LangGraph run, specialists gather evidence through MCP, and a human approves the proposed fix.
 
 ```mermaid
 flowchart TB
-    subgraph IB["Ironbank (demo target)"]
+    subgraph IB["IronPay (demo target)"]
         API["Payments API (FastAPI)"]
         DBS[("Postgres, Redis")]
         GIT[("git history")]
@@ -136,7 +136,7 @@ flowchart TB
         R["runbooks"]
     end
     CH[("ChromaDB")]
-    subgraph JV["Jarvis"]
+    subgraph JV["IncidentIQ"]
         WH["Webhook"]
         G["LangGraph run"]
         CK[("SQLite checkpoints")]
@@ -194,7 +194,7 @@ One alert from firing to summary. The specialists run in parallel, and the run i
 sequenceDiagram
     autonumber
     participant AM as Alertmanager
-    participant API as Jarvis API
+    participant API as IncidentIQ API
     participant G as LangGraph run
     participant T as Triage (Haiku)
     participant S as Specialists (Haiku)
@@ -379,7 +379,7 @@ Plan only, not actuals. Dates are targets for about four weeks of work.
 
 ```mermaid
 gantt
-    title Jarvis build plan (targets, not actuals)
+    title IncidentIQ build plan (targets, not actuals)
     dateFormat YYYY-MM-DD
     axisFormat %b %d
     section Foundation
@@ -402,14 +402,14 @@ gantt
 
 ### Project overview
 
-**1. What is Jarvis, in one or two sentences?**
+**1. What is IncidentIQ, in one or two sentences?**
 It is a LangGraph multi-agent system that does the first pass of incident investigation. When an alert fires it gathers evidence from logs, metrics, git and runbooks through MCP tools, ranks likely root causes with citations, proposes a fix and waits for a human to approve it.
 
 **2. Why multiple agents instead of one agent with every tool?**
 One agent with 10+ tools and a long transcript tends to pick tools poorly and mixes up sources. Splitting by data source keeps each specialist's prompt and tool list small, lets them run in parallel, and lets me use a cheap model for that work. The reasoning agent then sees clean, numbered evidence instead of raw tool transcripts. The cost is more orchestration code, which LangGraph keeps explicit.
 
 **3. How do you test it? You cannot wait for real outages.**
-I break Ironbank on purpose. Each of 15–20 scenarios has an inject script (kill a container, drop an index, bad env var, low memory limit, bad commit), a reset script and a ground-truth cause ID. The harness runs them one by one and scores top-1 and top-3 accuracy, time to first hypothesis, and tokens and USD per incident.
+I break IronPay on purpose. Each of 15–20 scenarios has an inject script (kill a container, drop an index, bad env var, low memory limit, bad commit), a reset script and a ground-truth cause ID. The harness runs them one by one and scores top-1 and top-3 accuracy, time to first hypothesis, and tokens and USD per incident.
 
 **4. What did you write yourself and what is off the shelf?**
 Off the shelf: LangGraph, the MCP SDK, the observability stack, ChromaDB. I wrote the graph and its nodes, the four MCP servers and their summarizing logic, the citation validator, the LLM module with cost logging and budget caps, the fault scripts, the eval harness with replay, and the UI.
@@ -438,7 +438,7 @@ It makes scoring exact and cheap: compare two strings, no LLM judge needed. The 
 A wrong fix in production is worse than a slow one, and trust in an agent has to be earned with a track record. The approval node calls `interrupt()` with the hypotheses. LangGraph checkpoints state to SQLite and returns. When the engineer decides, the API calls the graph with `Command(resume=decision)` on the same `thread_id`, the node re-runs, `interrupt()` returns the decision, and the graph continues to the summary.
 
 **12. What are evidence snapshots and why do you need them?**
-During a live eval run, every MCP tool call and response is saved. Replay mode serves those saved responses instead of calling the real tools. That makes runs reproducible (live metrics differ slightly every time) and cheap, because I can change the reasoning prompt and re-score without breaking Ironbank again or paying for evidence gathering. The limit is that replay cannot test a specialist that would ask for a different query.
+During a live eval run, every MCP tool call and response is saved. Replay mode serves those saved responses instead of calling the real tools. That makes runs reproducible (live metrics differ slightly every time) and cheap, because I can change the reasoning prompt and re-score without breaking IronPay again or paying for evidence gathering. The limit is that replay cannot test a specialist that would ask for a different query.
 
 **13. How do you keep cost under control on a 100-dollar budget?**
 Haiku for bulk steps; tool output summarized on the server so prompts stay small; system prompts and tool definitions first in each request with cache breakpoints; a six-call step limit per specialist; a per-incident and monthly budget cap in the LLM module; replay mode for prompt iteration; and a small eval set. Every call logs tokens and USD, so I know where money goes.
@@ -451,7 +451,7 @@ Streamlit would be faster for a first version, but the approval page needs a cle
 **15. How does the parallel fan-out work in LangGraph, and what can go wrong?**
 Triage returns the list of specialists. A conditional edge maps that list to `Send("specialist", {...})` objects, and LangGraph runs them in the same superstep. They all write to `evidence`, which is annotated with `operator.add` so the lists concatenate. Without the reducer you get an invalid concurrent update error. Evidence IDs must be unique across branches, so each specialist prefixes its IDs (for example `L1`, `M1`).
 
-**16. What happens if the Jarvis process restarts while an incident is waiting for approval?**
+**16. What happens if the IncidentIQ process restarts while an incident is waiting for approval?**
 Nothing is lost. The checkpointer saved the state at the interrupt. On restart, the API still knows the incident's `thread_id`, and resuming it with the decision continues from the approval node. Any side effects before the interrupt in that node would run again, so I keep that node free of side effects.
 
 **17. Explain MCP transports and why you picked streamable HTTP.**
@@ -476,20 +476,20 @@ Runbooks are short markdown files split by heading, with metadata for service an
 Elasticsearch indexes the full text; Loki indexes only labels and scans the lines in the selected streams. So queries must start with a narrow label selector and a short time window, or they get slow. The logs tool always sets the service label and the triage time window, and uses `count_over_time` to return pattern counts instead of raw lines.
 
 **24. How do the fault scripts create each failure?**
-They use Docker and SQL directly. A crash is `docker kill` on a container with restart disabled. Memory pressure sets a low `mem_limit` and calls a memory-heavy endpoint. A slow query drops an index. Bad config restarts a service with a wrong env var. A bad deploy checks out a prepared commit in the Ironbank clone and rebuilds, so the changes server sees a real commit. Every inject has a matching reset.
+They use Docker and SQL directly. A crash is `docker kill` on a container with restart disabled. Memory pressure sets a low `mem_limit` and calls a memory-heavy endpoint. A slow query drops an index. Bad config restarts a service with a wrong env var. A bad deploy checks out a prepared commit in the IronPay clone and rebuilds, so the changes server sees a real commit. Every inject has a matching reset.
 
 ### Scaling and failure modes
 
 **25. An MCP server is down in the middle of an investigation. What happens?**
-The MCP client call times out and the specialist gets a `tool_result` with `is_error: true` and a short message. It can try another tool or stop and report that the source was unavailable. The reasoner sees "logs unavailable" as part of the evidence and should lower its confidence. The incident timeline shows the failed call, so the engineer knows what Jarvis could not see.
+The MCP client call times out and the specialist gets a `tool_result` with `is_error: true` and a short message. It can try another tool or stop and report that the source was unavailable. The reasoner sees "logs unavailable" as part of the evidence and should lower its confidence. The incident timeline shows the failed call, so the engineer knows what IncidentIQ could not see.
 
 **26. What stops an agent from looping forever or calling tools 50 times?**
 Each specialist has a hard step limit, the reasoner can request more evidence only once, the graph has a `recursion_limit`, and the per-incident budget cap stops the run if it passes a dollar amount. All of these move the incident to a clear state (`Failed` or "reasoned with partial evidence") instead of hanging.
 
-**27. Fifty alerts fire in one minute. What does Jarvis do?**
-Alertmanager groups related alerts first, so fifty alerts usually become a few groups. Jarvis deduplicates by group fingerprint, so a repeated notification does not start a second run. For many distinct groups, the webhook would put runs on a queue with a concurrency limit to stay under API rate limits and the budget cap. In the core scope runs are background tasks with a small semaphore; a real queue is a scale-up step.
+**27. Fifty alerts fire in one minute. What does IncidentIQ do?**
+Alertmanager groups related alerts first, so fifty alerts usually become a few groups. IncidentIQ deduplicates by group fingerprint, so a repeated notification does not start a second run. For many distinct groups, the webhook would put runs on a queue with a concurrency limit to stay under API rate limits and the budget cap. In the core scope runs are background tasks with a small semaphore; a real queue is a scale-up step.
 
-**28. Can someone attack Jarvis through log content, like prompt injection?**
+**28. Can someone attack IncidentIQ through log content, like prompt injection?**
 Yes, logs are untrusted text and a log line could say "ignore previous instructions". Tool output is wrapped and labeled as data in the prompt, and the system prompt says to treat it only as evidence. More important, all tools are read-only and nothing runs without human approval, so the worst case is a wrong hypothesis that a human rejects. If auto-remediation is added, it will be a small allowlist of commands that does not take free text from the model.
 
 **29. The Claude API returns 429s or 5xx errors. How do you handle it?**
@@ -500,7 +500,7 @@ Move state to Postgres with the LangGraph Postgres checkpointer, run graph execu
 
 ### Debugging scenarios
 
-**31. Jarvis keeps ranking "bad deploy" first on the missing-index scenario. What do you check?**
+**31. IncidentIQ keeps ranking "bad deploy" first on the missing-index scenario. What do you check?**
 First the evidence: did the metrics specialist query Postgres query latency or only API latency, and did the changes specialist return an unrelated recent commit that looks suspicious? Then the reasoning prompt: does it explain how to weigh "a deploy happened" against "query time went up with no deploy touching the DB"? I would replay the saved snapshot with prompt changes until it is fixed, then re-run the full set to make sure nothing else broke.
 
 **32. Median time to first hypothesis doubled after a change. What do you look at?**
@@ -551,7 +551,7 @@ Fill these with what actually happens during the build. Keep the structure, repl
 - **Closed cause taxonomy.** Exact, cheap scoring, but narrower than real incidents. The `other` option and unused taxonomy entries reduce the bias without removing it.
 - **Scripted faults.** Reproducible and labeled, but cleaner than real outages, which often have several overlapping causes. Accuracy here is an upper bound on real-world accuracy.
 - **SQLite and in-process background runs.** Simple and enough for one machine, but a single writer and no queue.
-- **Read-only tools plus human approval.** Safe, but Jarvis cannot verify a fix by applying it. Time to recovery still depends on a human.
+- **Read-only tools plus human approval.** Safe, but IncidentIQ cannot verify a fix by applying it. Time to recovery still depends on a human.
 - **Server-side summarization in MCP tools.** Fewer tokens and clearer evidence, but the summary logic can hide the one log line that mattered. The raw query is stored with each evidence item so a human can open it in Grafana.
 - **Replay evals.** Cheap and reproducible for the reasoning step, but they do not test whether specialists would pick different queries after a prompt change. Live runs are still needed before publishing numbers.
 
@@ -580,7 +580,7 @@ Templates only. Fill every bracket from `docs/results/`.
 
 ## Glossary
 
-- **Alert group / fingerprint**: Alertmanager bundles related alerts into a group with a stable ID; Jarvis uses it as the incident ID.
+- **Alert group / fingerprint**: Alertmanager bundles related alerts into a group with a stable ID; IncidentIQ uses it as the incident ID.
 - **Alertmanager**: Receives alerts from Prometheus, groups, deduplicates and routes them, and sends webhooks.
 - **cAdvisor**: Exposes per-container CPU, memory and restart metrics to Prometheus.
 - **Cardinality**: The number of unique label combinations; high cardinality makes Prometheus and Loki slow and expensive.
@@ -602,7 +602,7 @@ Templates only. Fill every bracket from `docs/results/`.
 - **RAG (retrieval-augmented generation)**: Retrieving relevant documents and putting them in the prompt.
 - **Reducer**: Function that tells LangGraph how to merge updates to one state key, such as list concatenation.
 - **Runbook**: Step-by-step guide for diagnosing and fixing a known failure.
-- **Specialist agent**: A Jarvis node that investigates one data source through one MCP server.
+- **Specialist agent**: A IncidentIQ node that investigates one data source through one MCP server.
 - **`stop_reason`**: Field in a Claude response saying why generation stopped: `end_turn`, `tool_use`, `max_tokens`, `refusal` and others.
 - **Structured outputs**: Claude API feature that makes the response match a given JSON Schema.
 - **Superstep**: One round of LangGraph execution in which all ready nodes run, possibly in parallel.
