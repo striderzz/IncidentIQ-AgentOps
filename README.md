@@ -1,4 +1,4 @@
-# Holmes – Incident Agents
+# Jarvis – Incident Agents
 
 **An AI agent that investigates why a service broke: it reads logs, metrics and runbooks, names the likely cause, and suggests a fix for a human to approve**
 
@@ -10,7 +10,7 @@ LangGraph · Model Context Protocol (MCP) · ChromaDB · Langfuse · FastAPI · 
 
 ## Overview
 
-When an alert fires, an on-call engineer checks logs, metrics, recent changes and runbooks before finding the cause. Holmes does that first pass automatically.
+When an alert fires, an on-call engineer checks logs, metrics, recent changes and runbooks before finding the cause. Jarvis does that first pass automatically.
 
 A small team of agents built in **LangGraph** collects evidence through **MCP tools**:
 
@@ -42,7 +42,7 @@ flowchart LR
 
 ## How it is tested
 
-A demo app (or [Sterling](https://github.com/striderzz/sterling-payments-ledger)) is broken on purpose in 15–20 ways: a crashed container, a slow database, a bad config value, memory pressure, a bad deploy. For each incident Holmes is scored on:
+A demo app (or [Ironbank](https://github.com/striderzz/ironbank-payments-ledger)) is broken on purpose in 15–20 ways: a crashed container, a slow database, a bad config value, memory pressure, a bad deploy. For each incident Jarvis is scored on:
 - whether the true cause is its top answer (**top-1 accuracy**) or in its top three;
 - time to answer and **cost per investigation** (from Langfuse).
 
@@ -86,12 +86,12 @@ Every AI feature goes through one small provider layer, so you can switch models
 ## Repository structure
 
 ```
-holmes-incident-agents/
+jarvis-incident-agents/
 ├── requirements.txt
 ├── .env.example
-├── holmes/agents/      # LangGraph graph + agents
-├── holmes/mcp/         # MCP servers: logs, metrics
-├── holmes/rag/         # runbook loader + ChromaDB
+├── jarvis/agents/      # LangGraph graph + agents
+├── jarvis/mcp/         # MCP servers: logs, metrics
+├── jarvis/rag/         # runbook loader + ChromaDB
 ├── incidents/          # break-it scripts + expected causes
 ├── evals/              # scoring script
 ├── console/            # Streamlit app
