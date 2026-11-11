@@ -4,7 +4,7 @@ This file tells Claude (Claude Code) how to build this project. Read **README.md
 
 ## Goal
 
-When an alert fires, a LangGraph multi-agent workflow does the on-call engineer's first pass on IronPay (`ironpay-ledgerapi`):
+When an alert fires, a LangGraph multi-agent workflow does the on-call engineer's first pass on IronPay (`IronPay-LedgerAPI`):
 
 - a triage agent reads the Alertmanager alert and picks which specialists to run;
 - four specialist agents pull evidence in parallel through MCP tool servers: logs from Loki, metrics from Prometheus, recent deploys and config from git, and runbooks through RAG over markdown runbooks in ChromaDB;

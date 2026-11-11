@@ -175,7 +175,7 @@ A small Next.js + Tailwind app with three screens: the incident list, an inciden
 ## Project structure
 
 ```
-incidentiq-agentops/
+IncidentIQ-AgentOps/
 ├── incidentiq/
 │   ├── api/              # FastAPI: alert webhook, incidents, approval resume
 │   ├── graph/            # LangGraph state, nodes, edges, graph builder
@@ -223,12 +223,12 @@ This is the target workflow once Phase 1 lands. None of it runs yet.
 
 ```bash
 # IncidentIQ expects IronPay as a sibling folder
-git clone https://github.com/striderzz/ironpay-ledgerapi.git
-git clone https://github.com/striderzz/incidentiq-agentops.git
-cd incidentiq-agentops
+git clone https://github.com/striderzz/IronPay-LedgerAPI.git
+git clone https://github.com/striderzz/IncidentIQ-AgentOps.git
+cd IncidentIQ-AgentOps
 
 cp .env.example .env
-# set ANTHROPIC_API_KEY, IRONPAY_DIR=../ironpay-ledgerapi,
+# set ANTHROPIC_API_KEY, IRONPAY_DIR=../IronPay-LedgerAPI,
 # LLM_MONTHLY_BUDGET_USD and INCIDENTIQ_MAX_USD_PER_INCIDENT
 
 make up              # docker compose up -d: IronPay, observability, MCP servers, IncidentIQ API, UI
@@ -288,9 +288,9 @@ Nothing has been measured yet. Each value is filled in from a real run, and the 
 
 ## Related projects
 
-- [IronPay LedgerAPI](https://github.com/striderzz/ironpay-ledgerapi): the payments service IncidentIQ investigates; every eval scenario breaks it on purpose
-- [CloudShip DevOps](https://github.com/striderzz/cloudship-devops): deploys IronPay to AWS; a later target for pointing IncidentIQ at a cloud deployment
-- [EvalForge LLMOps](https://github.com/striderzz/evalforge-llmops): LLM evaluation methods that the scoring and replay ideas here build on
+- [IronPay LedgerAPI](https://github.com/striderzz/IronPay-LedgerAPI): the payments service IncidentIQ investigates; every eval scenario breaks it on purpose
+- [CloudShip DevOps](https://github.com/striderzz/CloudShip-DevOps): deploys IronPay to AWS; a later target for pointing IncidentIQ at a cloud deployment
+- [EvalForge LLMOps](https://github.com/striderzz/EvalForge-LLMOps): LLM evaluation methods that the scoring and replay ideas here build on
 
 ## Author
 
